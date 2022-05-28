@@ -1,3 +1,4 @@
-docker pull deezer/spleeter:3.8-4stems
+docker pull deezer/spleeter:3.8-2stems
 
-docker run -v "C:\programming\BachelorThesis\data\raw":"/input" -v "C:\programming\BachelorThesis\data\split":"/output" -v "C:\programming\BachelorThesis\training-data-preprocessor\split.sh":"/split.sh" --entrypoint="/split.sh" --rm deezer/spleeter:3.8-4stems
+::docker run -v "C:\Programming\BachelorThesis\data\raw":"/input" -v "C:\Programming\BachelorThesis\data\split":"/output" -v "C:\Programming\BachelorThesis\training-data-preprocessor\split.sh":"/split.sh" --entrypoint="spleeter separate -p spleeter:4stems -o /output /input/paul.mp3" --rm -it deezer/spleeter:3.8-4stems
+docker run -v "C:\Programming\BachelorThesis\data\raw":"/input" -v "C:\Programming\BachelorThesis\data\split":"/output" -v "C:\Programming\BachelorThesis\training-data-preprocessor\split.sh":"/split.sh" --entrypoint="/bin/bash" --rm -it deezer/spleeter:3.8-4stems

@@ -1,90 +1,69 @@
-import os
-
-import numpy.random
-import torchaudio
 import torch
-import torch.nn as nn
+from torch.utils.data import DataLoader
+from tqdm import tqdm
 
-from core.util import format_input_output
-from model.LSTM import LSTMModel
-from training.audio_utils import to_single_channel, prepare_offset_windows
+from core.config import Config
+from model.loss import DiscretizedMixtureLogisticLoss
+from model.modules.upsampling import ConvInUpsampleNetwork
+from model.wavenet import WaveNet
+from training.dataset import get_dataset
 
 if __name__ == '__main__':
     print(f'Running training on {torch.cuda.get_device_name(torch.cuda.current_device())}')
-    num_epochs = 200
 
-    in_seq_len = 44100
-    out_seq_len = 44100
+    upsample_net = ConvInUpsampleNetwork(
+        upsample_scales=Config.upsample_scales,
+        cin_channels=Config.num_mels
+    )
+    model = WaveNet(
+        out_channels=Config.out_channels,
+        layers=Config.layers,
+        stacks=Config.stacks,
+        residual_channels=Config.residual_channels,
+        gate_channels=Config.gate_channels,
+        skip_channels=Config.skip_channels,
+        local_conditioning_channels=Config.num_mels,
+        dropout_probability=Config.dropout_probability,
+        kernel_size=Config.kernel_size,
+        upsample_net=upsample_net
+    ).cuda()
+    model.train()
 
-    in_channels = 2
-    batch_size = 40
-    hidden_dim = 20
-    num_layers = 5
+    Config.in_seq_len = model.receptive_field
+    Config.out_seq_len = model.receptive_field
 
-    model = LSTMModel(in_channels, hidden_dim, num_layers, out_seq_len, pool_kernel_size=100).cuda()
-    total_num_sequences = 0
+    error = DiscretizedMixtureLogisticLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=Config.learning_rate)
 
-    error = nn.MSELoss()
+    dataset = get_dataset()
+    dataloader = DataLoader(dataset, batch_size=Config.batch_size, shuffle=True)
 
-    learning_rate = 5e-5
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
-    input_directory = '../data/split'
-
-    songs = [format_input_output(directory) for directory in os.walk(input_directory)]
-    raw_inputs = []
-    raw_expected_outputs = []
-    inputs = torch.Tensor()
-    expected_outputs = torch.Tensor()
-
-    print("Creating batches...")
-    for song in songs:
-        if 'input' in song.keys():
-            print(f"Song: {song['input']}")
-            input_no_drums, sample_rate = torchaudio.load(song['input'], normalize=True)
-            expected_outputs, _ = torchaudio.load(song['output'], normalize=True)
-
-            input_no_drums = to_single_channel(input_no_drums)
-            expected_outputs = to_single_channel(expected_outputs)
-
-            length = input_no_drums.size()[0]  # number of samples in the whole song
-
-            num_sequences = length // out_seq_len
-            total_num_sequences += num_sequences
-
-            for seq_number in range(num_sequences):
-                seq_head = seq_number * out_seq_len
-
-                combined_input = prepare_offset_windows(input_no_drums, expected_outputs, seq_head, in_seq_len, out_seq_len)
-                expected_output = expected_outputs[seq_head:seq_head + out_seq_len].reshape(1, -1)
-
-                raw_inputs.append(combined_input)
-                raw_expected_outputs.append(expected_output)
-
-    inputs = torch.cat(raw_inputs, dim=0)
-    expected_outputs = torch.cat(raw_expected_outputs, dim=0)
-
-    batch_count = total_num_sequences // batch_size
-    print(f"Created {batch_count} batches.\nBeginning training")
-    for epoch in range(num_epochs):
+    for epoch in range(Config.epochs):
         epoch_losses = []
-        perm = numpy.random.permutation(inputs.size()[0])
-        inputs = inputs[perm]
-        expected_outputs = expected_outputs[perm]
-        for batch_num in range(batch_count):
-            input = inputs[batch_num * batch_size: (batch_num + 1) * batch_size].cuda()
-            expected_output = expected_outputs[batch_num * batch_size: (batch_num + 1) * batch_size].cuda()
-
+        for batch_num, (X, Cond, Y) in tqdm(enumerate(dataloader)):
             optimizer.zero_grad()
+            X = X.cuda()
+            Cond = Cond.cuda()
+            Y = Y.cuda()
 
-            output = model(input)
+            Y_pred = model(X, Cond)
 
-            loss = error(output, expected_output)
+            input_lengths = torch.LongTensor([len(y) for y in Y]).cuda()
+            loss = error(
+                input=Y_pred,
+                target=Y,
+                lengths=input_lengths
+            )
             loss.backward()
             optimizer.step()
 
             epoch_losses.append(loss.item())
-            print(f'Epoch: {epoch} Batch: {batch_num}/{batch_count} Loss: {loss.item()}')
-        checkpoint_name = f'epoch{epoch}_inSeqLen{in_seq_len}_outSeqLen{out_seq_len}_batchSize{batch_size}_hiddenDim{hidden_dim}_numLayers{num_layers}'
+            print(f'Epoch: {epoch} Batch: {batch_num}/{len(dataloader)} Loss: {loss.item()}')
+            if batch_num % 20 == 0:
+                checkpoint_name = f'wavenet_epoch{epoch}_batchNum{batch_num}_withUpsampling_withMelSpec'
+                torch.save(model.state_dict(), f'..\\saved_models\\{checkpoint_name}')
+
+        checkpoint_name = f'wavenet_epoch{epoch}_withUpsampling_withMelSpec'
         with open('losses.txt', 'a') as f:
             f.write(f'Model: {checkpoint_name} - LOSS: {torch.mean(torch.Tensor(epoch_losses))}\n')
         torch.save(model.state_dict(), f'..\\saved_models\\{checkpoint_name}')
