@@ -1,67 +1,61 @@
 import torch
 from torch.utils.data import DataLoader
-from tqdm import tqdm
+import torch.nn.functional as F
 
 from core.config import Config
 from model.loss import DiscretizedMixtureLogisticLoss
-from model.modules.upsampling import ConvInUpsampleNetwork
-from model.wavenet import WaveNet
-from training.dataset import get_dataset
+from model.wavenet_2 import WaveNetModel
+from training.dataset import get_dataset, DrumDataset
+from training.lrschedule import step_learning_rate_decay
+
+
+def progress_fn(step, total_steps):
+    print(f"Step {step}/{total_steps}")
+
 
 if __name__ == '__main__':
     print(f'Running training on {torch.cuda.get_device_name(torch.cuda.current_device())}')
 
-    upsample_net = ConvInUpsampleNetwork(
-        upsample_scales=Config.upsample_scales,
-        cin_channels=Config.num_mels
-    )
-    model = WaveNet(
-        out_channels=Config.out_channels,
-        layers=Config.layers,
-        stacks=Config.stacks,
-        residual_channels=Config.residual_channels,
-        gate_channels=Config.gate_channels,
-        skip_channels=Config.skip_channels,
-        local_conditioning_channels=Config.num_mels,
-        dropout_probability=Config.dropout_probability,
-        kernel_size=Config.kernel_size,
-        upsample_net=upsample_net
-    ).cuda()
+    model = WaveNetModel().cuda()
     model.train()
-
-    Config.in_seq_len = model.receptive_field
-    Config.out_seq_len = model.receptive_field
 
     error = DiscretizedMixtureLogisticLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=Config.learning_rate)
 
-    dataset = get_dataset()
+    dataset = DrumDataset.load(Config.dataset_dir)
     dataloader = DataLoader(dataset, batch_size=Config.batch_size, shuffle=True)
+
+    step = 0
 
     for epoch in range(Config.epochs):
         epoch_losses = []
-        for batch_num, (X, Cond, Y) in tqdm(enumerate(dataloader)):
+        for batch_num, (X, Cond, Y) in enumerate(dataloader):
+            step += 1
+
+            current_lr = step_learning_rate_decay(
+                Config.learning_rate, step, Config.anneal_rate, Config.anneal_interval)
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = current_lr
             optimizer.zero_grad()
+
             X = X.cuda()
             Cond = Cond.cuda()
-            Y = Y.cuda()
+            Y = Y.type('torch.LongTensor').cuda().squeeze(2)
 
-            Y_pred = model(X, Cond)
+            Y_pred = model(X, Cond).transpose(1, 2).contiguous()
 
-            input_lengths = torch.LongTensor([len(y) for y in Y]).cuda()
-            loss = error(
+            loss = F.cross_entropy(
                 input=Y_pred,
                 target=Y,
-                lengths=input_lengths
             )
             loss.backward()
             optimizer.step()
 
             epoch_losses.append(loss.item())
-            print(f'Epoch: {epoch} Batch: {batch_num}/{len(dataloader)} Loss: {loss.item()}')
+            print(f'Epoch: {epoch} Batch: {batch_num}/{len(dataloader)} Loss: {loss.item()} LR: {current_lr}')
             if batch_num % 20 == 0:
-                checkpoint_name = f'wavenet_epoch{epoch}_batchNum{batch_num}_withUpsampling_withMelSpec'
-                torch.save(model.state_dict(), f'..\\saved_models\\{checkpoint_name}')
+                checkpoint_name = f'wavenet_epoch{epoch}_batchNum{batch_num}'
+                torch.save(model.state_dict(), f'..\\saved_models\\wavenet2_ed3_withConv\\{checkpoint_name}')
 
         checkpoint_name = f'wavenet_epoch{epoch}_withUpsampling_withMelSpec'
         with open('losses.txt', 'a') as f:

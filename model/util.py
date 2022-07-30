@@ -2,6 +2,7 @@
 # Code is adapted from:
 # https://github.com/pclucas14/pixel-cnn-pp
 # https://github.com/openai/pixel-cnn
+import os
 
 import numpy as np
 
@@ -257,3 +258,33 @@ def sample_from_mix_gaussian(y, log_scale_min=-7.0):
 
     x = torch.clamp(x, min=-1.0, max=1.0)
     return x
+
+
+# wavenet 2
+
+def quantize_data(data, classes):
+    mu_x = mu_law_encoding(data, classes)
+    bins = np.linspace(-1, 1, classes)
+    quantized = np.digitize(mu_x, bins) - 1
+    return quantized.astype('uint8')
+
+
+def list_all_audio_files(location):
+    audio_files = []
+    for dirpath, dirnames, filenames in os.walk(location):
+        for filename in [f for f in filenames if f.endswith((".mp3", ".wav", ".aif", "aiff"))]:
+            audio_files.append(os.path.join(dirpath, filename))
+
+    if len(audio_files) == 0:
+        print("found no audio files in " + location)
+    return audio_files
+
+
+def mu_law_encoding(data, mu):
+    mu_x = np.sign(data) * np.log(1 + mu * np.abs(data)) / np.log(mu + 1)
+    return mu_x
+
+
+def mu_law_expansion(data, mu):
+    s = np.sign(data) * (np.exp(np.abs(data) * np.log(mu + 1)) - 1) / mu
+    return s

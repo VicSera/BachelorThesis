@@ -1,59 +1,22 @@
 import torch
 import torchaudio
-from torchaudio.transforms import Resample, MelSpectrogram
-from tqdm import tqdm
 
 from core.config import Config
-from model.LSTM import LSTMModel
-from model.modules.upsampling import ConvInUpsampleNetwork
-from model.util import sample_from_discretized_mix_logistic
-from model.wavenet import WaveNet
-from training.audio_utils import prepare_offset_windows, to_single_channel
+from model.wavenet_2 import WaveNetModel
 
 if __name__ == '__main__':
-    epoch = 0
+    epoch = 6
+    batch_num = 80
+    model_name = "wavenet2_ed3_withConv"
 
-    in_seq_len = 1024
-    out_seq_len = 1024
-    input_dim = 2
-
-    mel_spec = MelSpectrogram(
-        sample_rate=Config.sample_rate,
-        n_fft=Config.n_fft,
-        win_length=Config.win_length,
-        hop_length=Config.hop_size,
-        center=True,
-        pad_mode="reflect",
-        power=2.0,
-        norm="slaney",
-        onesided=True,
-        n_mels=Config.num_mels
-    )
-
-    upsample_net = ConvInUpsampleNetwork(
-        upsample_scales=Config.upsample_scales,
-        cin_channels=Config.num_mels
-    )
-    model = WaveNet(
-        out_channels=Config.out_channels,
-        layers=Config.layers,
-        stacks=Config.stacks,
-        residual_channels=Config.residual_channels,
-        gate_channels=Config.gate_channels,
-        skip_channels=Config.skip_channels,
-        local_conditioning_channels=Config.num_mels,
-        dropout_probability=Config.dropout_probability,
-        kernel_size=Config.kernel_size,
-        upsample_net=upsample_net
-    )
-    model.load_state_dict(torch.load(f'..\\saved_models\\wavenet_epoch6_batchNum40_withUpsampling_withMelSpec'))
+    model = WaveNetModel()
+    model.load_state_dict(torch.load(f'..\\saved_models\\{model_name}\\wavenet_epoch{epoch}_batchNum{batch_num}'))
     model.eval()
-    model.make_generation_fast_()
 
-    waveform, sample_rate = torchaudio.load('..\\data\\split\\ex2\\no-drums.wav')
+    # waveform, sample_rate = torchaudio.load('..\\data\\split\\ex2\\no-drums.wav')
 
-    resampler = Resample(sample_rate, Config.sample_rate)
-    cond_track = mel_spec(to_single_channel(resampler(waveform))).unsqueeze(0)
+    # resampler = Resample(sample_rate, Config.sample_rate)
+    # cond_track = mel_spec(to_single_channel(resampler(waveform))).unsqueeze(0)
 
     # length = cond_track.size(-1)
     length = 10
@@ -62,8 +25,18 @@ if __name__ == '__main__':
     output = torch.Tensor()
 
     with torch.no_grad():
-        sequence = model.incremental_forward(c=cond_track[:,:,:length], T=length * Config.hop_size, tqdm=tqdm, softmax=True, quantize=True, log_scale_min=Config.log_scale_min)
-        torchaudio.save('..\\generated.flac', sequence.view(1, length * Config.hop_size), Config.sample_rate, format='flac')
+        def prog_callback(step, total_steps):
+            print(str(100 * step // total_steps) + "% generated")
+
+
+        generated = model.generate_fast(num_samples=160000,
+                                        progress_callback=prog_callback,
+                                        progress_interval=1000,
+                                        temperature=1.0,
+                                        regularize=0.)
+        generated = torch.from_numpy(generated).reshape(1, -1)
+        # sequence = model.incremental_forward(c=cond_track[:,:,:length], T=length * Config.hop_size, tqdm=tqdm, softmax=True, quantize=True, log_scale_min=Config.log_scale_min)
+        torchaudio.save('..\\generated.flac', generated, Config.sample_rate, format='flac')
 
     #     for seq_number in range(num_sequences):
     #         print(f"Processing sequence {seq_number}/{num_sequences}")
