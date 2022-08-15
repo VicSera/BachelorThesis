@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import Dataset
 
+from core.util import normalize
 from midi.util import note_or_control_to_one_hot
 
 
@@ -14,7 +15,11 @@ class MidiDataset(Dataset):
 
         for item in sequence:
             one_hot = note_or_control_to_one_hot(item[0])
-            encoded.append(torch.cat((one_hot, item[1:])))
+            encoded.append(torch.cat((
+                one_hot,
+                normalize(item[-2], max=127).reshape(1),
+                normalize(item[-1], max=4295).reshape(1)
+            )))
         ts = torch.stack(encoded)
         return ts[:-1], ts[-1]
 

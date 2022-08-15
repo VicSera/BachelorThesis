@@ -6,21 +6,28 @@ from core.config import Config
 FILENAME_INDEX = 7
 
 meta = {
-    'max_time': 0  # 4295
+    'max_time': 0,  # 4295
+    'max_len': None,
+    'min_len': None
 }
 
 
 def note_or_control_to_one_hot(value):
-    one_hot = torch.zeros((Config.UNIQUE_NOTES_COUNT + Config.UNIQUE_CONTROLS_COUNT - 1), dtype=torch.int16)
+    one_hot = torch.zeros(Config.NOTES_AND_CONTROLS_COUNT, dtype=torch.int16)
 
-    if value in Config.UNIQUE_NOTES:
-        one_hot[Config.UNIQUE_NOTES.index(value)] = 1
-    elif value in Config.UNIQUE_CONTROLS:
-        idx = Config.UNIQUE_CONTROLS.index(value)
-        if idx != len(Config.UNIQUE_CONTROLS) - 1:
-            one_hot[idx + Config.UNIQUE_NOTES_COUNT] = 1
+    if value in Config.UNIQUE_NOTES_AND_CONTROLS:
+        one_hot[Config.UNIQUE_NOTES_AND_CONTROLS.index(value)] = 1
+    else:
+        raise Exception("Invalid value given to note_or_control_to_one_hot: " + value)
 
     return one_hot
+
+
+def idx_to_note_or_control(idx):
+    if idx < Config.UNIQUE_NOTES_COUNT:
+        return {'type': 'note_on', 'value': Config.UNIQUE_NOTES_AND_CONTROLS[idx]}
+    else:
+        return {'type': 'control_change', 'value': Config.UNIQUE_NOTES_AND_CONTROLS[idx]}
 
 
 def midi_message_to_tensor(msg):
@@ -57,6 +64,7 @@ def process_midi_file(file_name):
     for i, track in enumerate(mid.tracks):
         for msg in track:
             if msg.type in ['control_change', 'note_on']:
+
                 sequence.append(midi_message_to_tensor(msg))
 
                 if len(sequence) == Config.SEQUENCE_LENGTH:
@@ -91,5 +99,16 @@ def compile_dataset_to_file(dataset_root):
     torch.save(ts, f'{dataset_root}/dataset.pt')
 
 
+def print_midi_file(file_name):
+    print(file_name)
+    mid = MidiFile(file_name)
+
+    for i, track in enumerate(mid.tracks):
+        for msg in track:
+            print(msg)
+
 if __name__ == '__main__':
+    # print_midi_file('../inference/test.mid')
+    # print_midi_file(Config.DATASET_ROOT + '/drummer1/session1/1_funk_80_beat_4-4.mid')
     compile_dataset_to_file(Config.DATASET_ROOT)
+    # print(meta)

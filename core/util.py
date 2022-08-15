@@ -9,3 +9,11 @@ def format_input_output(osWalkEntry):
         }
     except:
         return {}
+
+
+def normalize(value, max, min=0):
+    return (value - min) / (max - min)
+
+
+def denormalize(value, max, min=0):
+    return value * (max - min) + min

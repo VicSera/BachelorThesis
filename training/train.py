@@ -38,6 +38,7 @@ if __name__ == '__main__':
             optimizer.zero_grad()
 
             X = X.cuda()
+            Y = Y.cuda()
 
             Y_pred = model(X)
 
@@ -49,8 +50,11 @@ if __name__ == '__main__':
             print(f'Epoch: {epoch} Batch: {batch_num}/{len(dataloader)} Loss: {loss.item()} LR: {current_lr}')
             if batch_num % 20 == 0:
                 checkpoint_name = f'LSTMidi_Epoch{epoch}_BatchNum{batch_num}'
-                # torch.save(model.state_dict(), f'..\\saved_models\\LSTMidi\\{checkpoint_name}')
+                torch.save(model.state_dict(), f'..\\saved_models\\LSTMidi_sesh3\\{checkpoint_name}')
 
         checkpoint_name = f'LSTMidi_Epoch{epoch}'
         with open('losses.txt', 'a') as f:
             f.write(f'Model: {checkpoint_name} - LOSS: {torch.mean(torch.Tensor(epoch_losses))}\n')
+
+        checkpoint_name = f'LSTMidi_Epoch{epoch}_End'
+        torch.save(model.state_dict(), f'..\\saved_models\\LSTMidi_sesh3\\{checkpoint_name}')
