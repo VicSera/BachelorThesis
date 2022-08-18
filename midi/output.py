@@ -1,44 +1,54 @@
-from mido import MidiFile, MidiTrack, Message, MetaMessage, bpm2tempo
+import pretty_midi
+import torch
 from torch.distributions import Categorical
 
-from core.util import denormalize
-from midi.util import idx_to_note_or_control
+from core.config import Config
+from core.util import denormalize, clamp
 
 
-def tensor_to_track(ts):
-    track = MidiTrack()
-    track.append(MetaMessage('set_tempo', tempo=bpm2tempo(12), time=0))
-    track.append(MetaMessage('time_signature', numerator=4, denominator=4, clocks_per_click=24, notated_32nd_notes_per_beat=8, time=0))
-    track.append(MetaMessage('key_signature', key='C', time=0))
+def tensor_to_midi(ts):
+    mid = pretty_midi.PrettyMIDI()
+    instrument = pretty_midi.Instrument(
+        program=pretty_midi.instrument_name_to_program(Config.INSTRUMENT)
+    )
+
+    prev_start = 0
 
     for entry in ts:
-        data = extract_note_or_control(entry)
-        value_or_velocity = denormalize(entry[-2], max=127).int().item() % 128
-        time = denormalize(entry[-1], max=4295).int().item()
-        if time < 0:
-            time = -time
-        if data['type'] == 'note_on':
-            msg = Message('note_on', channel=9, note=data['value'], velocity=value_or_velocity, time=time)
-        else:
-            msg = Message('control_change', channel=9, control=data['value'], value=value_or_velocity, time=time)
-        track.append(msg)
-        print(msg)
+        norm_pitch, norm_velocity, step, duration = entry
+        start = clamp((prev_start + step).item())
+        end = clamp((start + duration).item())
+        velocity = clamp(denormalize(norm_velocity, Config.MAX_VELOCITY).int().item())
+        pitch = clamp(denormalize(norm_pitch, Config.NOTES_COUNT).int().item())
+        prev_start = start
 
-    return track
+        note = pretty_midi.Note(
+            pitch=pitch,
+            velocity=velocity,
+            start=start,
+            end=end
+        )
 
+        instrument.notes.append(note)
 
-def extract_note_or_control(entry):
-    logits = entry[:26]
-    distribution = Categorical(logits=logits)
-    idx = distribution.sample()
-    data = idx_to_note_or_control(idx)
-    return data
+    mid.instruments.append(instrument)
+
+    return mid
 
 
-def tensor_to_midi(ts, filename):
-    mid = MidiFile()
-    track = tensor_to_track(ts)
-    mid.tracks.append(track)
+def generate_midi(model, start_sequence, target_length):
+    generated = start_sequence
+    with torch.no_grad():
+        while generated.size(1) < target_length:
+            prediction = torch.cat(model(generated), dim=1).unsqueeze(0)
+            logits = prediction[:, :, :Config.NOTES_COUNT] / Config.TEMPERATURE
+            pitch = Categorical(logits=logits).sample().unsqueeze(0) / Config.NOTES_COUNT
+            next_note = torch.cat((pitch, prediction[:, :, Config.NOTES_COUNT:]), dim=2)
+            generated = torch.cat((generated, next_note), dim=1)
+    generated = generated.squeeze(dim=0)
+    return tensor_to_midi(generated.cpu())
 
-    mid.save(filename)
 
+def generate_midi_from_scratch(model, target_length):
+    start_sequence = torch.zeros((1, 1, 4))
+    return generate_midi(model, start_sequence, target_length)

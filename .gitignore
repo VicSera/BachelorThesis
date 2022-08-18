@@ -1,1 +1,2 @@
-data
+data/**/*.pt
+saved_models

@@ -1,8 +1,7 @@
 import torch
 from torch.utils.data import Dataset
 
-from core.util import normalize
-from midi.util import note_or_control_to_one_hot
+from core.config import Config
 
 
 class MidiDataset(Dataset):
@@ -11,17 +10,9 @@ class MidiDataset(Dataset):
 
     def __getitem__(self, idx):
         sequence = self.data[idx]
-        encoded = []
 
-        for item in sequence:
-            one_hot = note_or_control_to_one_hot(item[0])
-            encoded.append(torch.cat((
-                one_hot,
-                normalize(item[-2], max=127).reshape(1),
-                normalize(item[-1], max=4295).reshape(1)
-            )))
-        ts = torch.stack(encoded)
-        return ts[:-1], ts[-1]
+        normalized = torch.div(sequence[:-1], torch.tensor([Config.NOTES_COUNT, 1, 1, 1]))
+        return normalized, sequence[-1, 0].long(), sequence[-1, 1:]
 
     def __len__(self):
         return len(self.data)

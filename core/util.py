@@ -1,3 +1,6 @@
+from core.config import Config
+
+
 def format_input_output(osWalkEntry):
     try:
         return {
@@ -17,3 +20,7 @@ def normalize(value, max, min=0):
 
 def denormalize(value, max, min=0):
     return value * (max - min) + min
+
+
+def clamp(value, maximum=Config.MAX_VELOCITY - 1, minimum=0):
+    return max(minimum, min(value, maximum))
