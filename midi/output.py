@@ -16,8 +16,8 @@ def tensor_to_midi(ts):
 
     for entry in ts:
         norm_pitch, norm_velocity, step, duration = entry
-        start = clamp((prev_start + step).item())
-        end = clamp((start + duration).item())
+        start = max(0, (prev_start + step).item())
+        end = max(0, (start + duration).item())
         velocity = clamp(denormalize(norm_velocity, Config.MAX_VELOCITY).int().item())
         pitch = clamp(denormalize(norm_pitch, Config.NOTES_COUNT).int().item())
         prev_start = start
@@ -52,3 +52,11 @@ def generate_midi(model, start_sequence, target_length):
 def generate_midi_from_scratch(model, target_length):
     start_sequence = torch.zeros((1, 1, 4))
     return generate_midi(model, start_sequence, target_length)
+
+
+def extract_midi_node_dict(mid):
+    notes = mid.instruments[0].notes
+    return [{'start': note.start,
+             'end': note.end,
+             'pitch': note.pitch,
+             'velocity': note.velocity} for note in notes]

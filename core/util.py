@@ -24,3 +24,4 @@ def denormalize(value, max, min=0):
 
 def clamp(value, maximum=Config.MAX_VELOCITY - 1, minimum=0):
     return max(minimum, min(value, maximum))
+

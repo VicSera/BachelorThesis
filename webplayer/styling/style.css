@@ -8,4 +8,5 @@ html,body {
 
 .scene {
   border: 1px solid black;
+  height: 70%;
 }

@@ -1,11 +1,13 @@
 const audioCtx = new AudioContext()
 
+let notes = []
+
 function initMidi() {
     MIDI.loadPlugin({
         soundfontUrl: "lib/soundfont/",
         instrument: "acoustic_grand_piano",
         onsuccess: function() {
-            alert('MIDI booted up')
+            console.log('MIDI booted up')
         }
     })
 
@@ -13,8 +15,9 @@ function initMidi() {
     MIDI.Player.setAnimation(function (data) {
         if (MIDI.Player.playing) {
             const highlighted = Object.keys(data.events).map(str => parseInt(str))
-            console.log(highlighted)
+            renderFallingNotes(data.now)
             highlightKeys(highlighted)
+            two.update()
         }
     })
 }
@@ -28,7 +31,8 @@ function toBinary(string) {
 }
 
 function process_midi(data) {
-    const content = 'data:audio/mid;base64,' + data
+    const content = 'data:audio/mid;base64,' + data.base64
+    notes = data.notes
     MIDI.Player.loadFile(content, () => {
         MIDI.Player.start()
     });
