@@ -1,12 +1,53 @@
 * {
   box-sizing: border-box;
+  font-family: Calibri, serif;
 }
 
-html,body {
-  height: 100%;
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #191036;
+}
+
+.top-bar {
+  height: 10%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.top-bar button {
+  border-radius: 35%;
+  border: none;
+  background-color: transparent;
+  color: #cccccc;
+  width: 70px;
+  height: 70px;
+  font-size: 18px;
+  margin: 20px;
+
+  transition: all 0.5s ease;
+}
+
+.top-bar button:hover {
+  cursor: pointer;
+  background-color:  #cccccc;
+  color: #191036;
 }
 
 .scene {
+  background-color: #18112f;
   border: 1px solid black;
-  height: 70%;
+  flex-grow: 9;
+  width: 100%;
 }

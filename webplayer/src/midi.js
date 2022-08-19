@@ -1,6 +1,28 @@
 const audioCtx = new AudioContext()
 
 let notes = []
+let nextContent = undefined
+let nextNotes = []
+let lastTime = 0
+
+function setNextContent(data, play=false) {
+    nextContent = 'data:audio/mid;base64,' + data.base64
+    nextNotes = data.notes
+
+    if (play) {
+        playNext()
+    }
+}
+
+function playNext() {
+    notes = nextNotes
+    MIDI.Player.loadFile(nextContent, () => {
+        nextNote = 0
+        MIDI.Player.start()
+        console.log("Playing next: ", nextContent)
+        fetchNextContent()
+    });
+}
 
 function initMidi() {
     MIDI.loadPlugin({
@@ -20,6 +42,12 @@ function initMidi() {
             two.update()
         }
     })
+
+    setInterval(() => {
+            if (MIDI.Player.playing && nextContent && Math.abs(MIDI.Player.currentTime - MIDI.Player.endTime) < 100)
+                playNext()
+        }, 1000
+    )
 }
 
 function toBinary(string) {
@@ -29,11 +57,11 @@ function toBinary(string) {
   }
   return btoa(String.fromCharCode(...new Uint8Array(codeUnits.buffer)));
 }
-
-function process_midi(data) {
-    const content = 'data:audio/mid;base64,' + data.base64
-    notes = data.notes
-    MIDI.Player.loadFile(content, () => {
-        MIDI.Player.start()
-    });
-}
+//
+// function process_midi(data) {
+//     const content = 'data:audio/mid;base64,' + data.base64
+//     notes = data.notes
+//     MIDI.Player.loadFile(content, () => {
+//         MIDI.Player.start()
+//     });
+// }

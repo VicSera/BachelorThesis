@@ -10,6 +10,17 @@ const windowSizeInSec = 2
 let two = undefined
 let height = undefined
 let previewHeight = undefined
+const radius = 2
+
+const whiteKeyColor = 'rgb(168,170,206)'
+const whiteKeyDownColor = 'rgb(56,176,192)'
+const blackKeyColor = 'rgb(4,20,37)'
+const blackKeyDownColor = 'rgb(56,176,192)'
+
+const fallingNoteColor = 'rgb(0,221,255)'
+
+const strokeColor = 'black'
+const lineWidth = 2
 
 let nextNote = 0
 
@@ -35,20 +46,22 @@ function initGraphics() {
         // black key
         if (rank === 1 || rank === 4 || rank === 6 || rank === 9 || rank === 11) {
             const x = lastX + keyWidth / 2
-            const rect = two.makeRectangle(x, height - keyHeight * 5/8, keyWidth * 3/4, keyHeight * 3/4)
+            const rect = two.makeRoundedRectangle(x, height - keyHeight * 5/8, keyWidth * 3/4, keyHeight * 3/4, radius)
 
-            rect.fill = 'black'
+            rect.fill = blackKeyColor
+            rect.stroke = strokeColor
+            rect.linewidth = lineWidth;
 
             keys.push(rect)
             blackKeyGroup.add(rect)
         } else { // white key
             const x = lastX + keyWidth
             lastX = x
-            const rect = two.makeRectangle(x, height - keyHeight / 2, keyWidth, keyHeight)
+            const rect = two.makeRoundedRectangle(x, height - keyHeight / 2, keyWidth, keyHeight, radius)
 
-            rect.fill = 'white'
-            rect.stroke = 'black'
-            rect.linewidth = 2;
+            rect.fill = whiteKeyColor
+            rect.stroke = strokeColor
+            rect.linewidth = lineWidth;
 
             keys.push(rect)
             whiteKeyGroup.add(rect)
@@ -62,12 +75,12 @@ function highlightKeys(highlighted) {
     for (let idx = 0; idx < noteCount; idx++) {
         const rank = idx % 12
         if (highlighted.find(i => i === idx)) {
-            keys[idx].fill = 'yellow'
+            keys[idx].fill = blackKeyDownColor
         } else {
             if (rank === 1 || rank === 4 || rank === 6 || rank === 9 || rank === 11) {
-                keys[idx].fill = 'black'
+                keys[idx].fill = blackKeyColor
             } else {
-                keys[idx].fill = 'white'
+                keys[idx].fill = whiteKeyColor
             }
         }
     }
@@ -84,6 +97,10 @@ function calculateNoteY(note, now) {
 }
 
 function renderFallingNotes(now) {
+    if (now === 0) {
+        return
+    }
+
     // Remove finished notes
     while (fallingNotes.length > 0 && fallingNotes[0].note.end < now) {
         fallingNotes[0].rect.remove();
@@ -95,8 +112,8 @@ function renderFallingNotes(now) {
         const note = notes[nextNote]
         const key = keys[note.pitch]
 
-        const rect = two.makeRectangle(key.position.x,0, key.width, getNoteHeight(note))
-        rect.fill = 'red'
+        const rect = two.makeRoundedRectangle(key.position.x,0, key.width, getNoteHeight(note), radius)
+        rect.fill = fallingNoteColor
         fallingNotes.push({
             note: note,
             rect: rect

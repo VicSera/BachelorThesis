@@ -34,21 +34,30 @@
 	<!-- axios -->
 	<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
+	<!-- fontawesome -->
+	<script src="https://kit.fontawesome.com/94e1c207d3.js" crossorigin="anonymous"></script>
+
 	<!-- scripts -->
 	<script src="src/graphics.js"></script>
 	<script src="src/midi.js"></script>
 	<script src="src/request.js"></script>
 	<script src="main.js"></script>
+
+	<!-- styling -->
 	<link rel="stylesheet" href="styling/style.css">
+
+	<link rel="icon" href="styling/music.png">
 
     <title>PerpetuuMidi</title>
 </head>
 <body>
-	<div>
-		<button onclick="MIDI.Player.pause()">Pause</button>
-		<button onclick="MIDI.Player.resume()">Resume</button>
-		<button onclick="MIDI.Player.start()">Play</button>
-		<button onclick="fetch_midi()">New song</button>
+	<div class="top-bar">
+		<button onclick="togglePlay()">
+			<i id="playPauseButton" class="fa-solid fa-pause"></i>
+		</button>
+		<button onclick="refresh()">
+			<i class="fa-solid fa-refresh"></i>
+		</button>
 	</div>
 	<div class="scene"></div>
 </body>
