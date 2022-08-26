@@ -51,15 +51,33 @@
     <title>PerpetuuMidi</title>
 </head>
 <body>
+	<span class="navbar-absolute logo">
+		PerpetuuMidi
+	</span>
+	<span id="example-file-message" class="navbar-absolute">
+		Sample file: <em id="file-name"></em>
+	</span>
 	<div class="top-bar">
+
 		<button onclick="togglePlay()">
 			<i id="playPauseButton" class="fa-solid fa-pause"></i>
 		</button>
 		<button onclick="refresh()">
 			<i class="fa-solid fa-refresh"></i>
 		</button>
+		<span>
+			<label for="file-upload">
+				<i class="fa-solid fa-upload"></i>
+			</label>
+			<input id="file-upload" type="file" onchange="fileUploaded()">
+		</span>
 	</div>
+
 	<div class="scene"></div>
+
+	<div id="spinner-container">
+		<div class="loader"></div>
+	</div>
 </body>
 </html>
 <script type="text/javascript">

@@ -19,11 +19,16 @@ class LSTMidi(nn.Module):
 
         self.relu = nn.ReLU()
 
-        self.lstm = nn.LSTM(input_size=self.input_size,
-                            hidden_size=hidden_dim,
-                            num_layers=num_layers,
-                            dropout=dropout,
-                            batch_first=True)
+        self.lstm1 = nn.LSTM(input_size=num_notes,
+                             hidden_size=hidden_dim,
+                             num_layers=num_layers,
+                             dropout=dropout,
+                             batch_first=True)
+        self.lstm2 = nn.LSTM(input_size=self.input_size,
+                             hidden_size=hidden_dim,
+                             num_layers=num_layers,
+                             dropout=dropout,
+                             batch_first=True)
 
         # Note/control output
         self.note_out = nn.Linear(hidden_dim, num_notes)
@@ -32,27 +37,36 @@ class LSTMidi(nn.Module):
         self.extra_params_out = nn.Linear(hidden_dim, num_extra_params)
 
     def forward(self, x):
-        x = x.requires_grad_()
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim)
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim)
+        pitch, extra = x
+        hidden1_0 = torch.zeros(self.num_layers, pitch.size(0), self.hidden_dim)
+        cell1_0 = torch.zeros(self.num_layers, pitch.size(0), self.hidden_dim)
+        hidden2_0 = torch.zeros(self.num_layers, extra.size(0), self.hidden_dim)
+        cell2_0 = torch.zeros(self.num_layers, extra.size(0), self.hidden_dim)
         if next(self.parameters()).is_cuda:
-            h0 = h0.cuda()
-            c0 = c0.cuda()
+            hidden1_0 = hidden1_0.cuda()
+            cell1_0 = cell1_0.cuda()
+            hidden2_0 = hidden2_0.cuda()
+            cell2_0 = cell2_0.cuda()
 
-        _, (hn, _) = self.lstm(x, (h0, c0))
+        _, (hidden1_n, _) = self.lstm1(pitch, (hidden1_0, cell1_0))
+        _, (hidden2_n, _) = self.lstm2(extra, (hidden2_0, cell2_0))
 
         # Note/control
-        note = self.note_out(hn[-1])
+        note = self.note_out(hidden1_n[-1])
 
         # Extra params output
-        extra_params = self.extra_params_out(hn[-1])
+        extra_params = self.extra_params_out(hidden2_n[-1])
 
         return note, extra_params
 
 
-def load_model(is_eval=True, is_gpu=True):
-    model = LSTMidi()
-    model.load_state_dict(torch.load(f'{Config.MODEL_DIR}\\{Config.MODEL_NAME}_{Config.SESSION}\\{Config.CHECKPOINT}'))
+def load_model(file=Config.WEIGHTS_PATH, is_eval=True, is_gpu=True):
+    model = LSTMidi(num_notes=Config.NOTES_COUNT,
+                    num_extra_params=Config.EXTRA_PARAMS_COUNT,
+                    hidden_dim=Config.HIDDEN_DIM,
+                    dropout=Config.DROPOUT,
+                    num_layers=Config.NUM_LAYERS)
+    model.load_state_dict(torch.load(file))
     if is_eval:
         model.eval()
     if is_gpu:

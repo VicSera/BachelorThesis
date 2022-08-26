@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import Dataset
 
-from core.config import Config
+from midi.util import sequence_to_input
 
 
 class MidiDataset(Dataset):
@@ -11,8 +11,8 @@ class MidiDataset(Dataset):
     def __getitem__(self, idx):
         sequence = self.data[idx]
 
-        normalized = torch.div(sequence[:-1], torch.tensor([Config.NOTES_COUNT, 1, 1, 1]))
-        return normalized, sequence[-1, 0].long(), sequence[-1, 1:]
+        pitch, normalized = sequence_to_input(sequence[:-1])
+        return pitch, normalized, sequence[-1, 0].long(), sequence[-1, 1:]
 
     def __len__(self):
         return len(self.data)

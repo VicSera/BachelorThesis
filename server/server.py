@@ -5,8 +5,11 @@ import uuid
 
 from flask import Flask, request, make_response
 from flask_cors import CORS
+from pretty_midi import pretty_midi
 
-from midi.output import generate_midi_from_scratch, extract_midi_node_dict
+from core.config import Config
+from midi.output import generate_midi_from_scratch, extract_midi_node_dict, generate_midi
+from midi.util import get_sequence
 from model.LSTMidi import load_model
 
 app = Flask(__name__)
@@ -18,8 +21,19 @@ model = load_model(is_gpu=False)
 @app.route('/generate', methods=['POST'])
 def generate():
     length = int(request.form['length'])
+
+    if len(request.files) == 1:
+        example_file = request.files['exampleFile']
+        if example_file.content_type != 'audio/mid':
+            return make_response('Bad file type', 400)
+
+        source_mid = pretty_midi.PrettyMIDI(example_file)
+        start_sequence = get_sequence(source_mid)
+        mid = generate_midi(model, start_sequence, length)
+    else:
+        mid = generate_midi_from_scratch(model, length)
+
     tmp_filename = f'{uuid.uuid4()}.mid'
-    mid = generate_midi_from_scratch(model, length)
     mid.write(tmp_filename)
 
     with open(tmp_filename, 'rb') as file:
@@ -31,7 +45,7 @@ def generate():
 
     response = {
         'base64': encoded_str,
-        'notes': notes
+        'notes': notes,
     }
 
     return make_response(json.dumps(response, indent=4), 200)

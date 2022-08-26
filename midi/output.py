@@ -1,9 +1,11 @@
 import pretty_midi
 import torch
+import torch.nn.functional as F
 from torch.distributions import Categorical
 
 from core.config import Config
 from core.util import denormalize, clamp
+from midi.util import sequence_to_input
 
 
 def tensor_to_midi(ts):
@@ -37,15 +39,24 @@ def tensor_to_midi(ts):
 
 
 def generate_midi(model, start_sequence, target_length):
-    generated = start_sequence
+    pitch, note_data = sequence_to_input(start_sequence)
+    generated = note_data
     with torch.no_grad():
         while generated.size(1) < target_length:
-            prediction = torch.cat(model(generated), dim=1).unsqueeze(0)
-            logits = prediction[:, :, :Config.NOTES_COUNT] / Config.TEMPERATURE
-            pitch = Categorical(logits=logits).sample().unsqueeze(0) / Config.NOTES_COUNT
-            next_note = torch.cat((pitch, prediction[:, :, Config.NOTES_COUNT:]), dim=2)
-            generated = torch.cat((generated, next_note), dim=1)
-    generated = generated.squeeze(dim=0)
+            pitch = pitch[:, -Config.SEQUENCE_LENGTH:, :]
+            note_data = generated[:, -Config.SEQUENCE_LENGTH:, :]
+
+            next_pitch, next_extra = model((pitch, note_data))
+
+            logits = next_pitch / Config.TEMPERATURE
+            next_pitch = Categorical(logits=logits).sample().unsqueeze(0)
+            next_pitch_one_hot = F.one_hot(next_pitch, num_classes=Config.NOTES_COUNT)
+
+            pitch = torch.cat((pitch, next_pitch_one_hot), dim=1)
+            next_note_data = torch.cat((next_pitch / Config.NOTES_COUNT, next_extra), dim=1)
+            generated = torch.cat((generated, next_note_data.unsqueeze(0)), dim=1)
+    generated = generated.squeeze(dim=0)[start_sequence.size(1):]
+
     return tensor_to_midi(generated.cpu())
 
 

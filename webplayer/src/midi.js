@@ -16,9 +16,11 @@ function setNextContent(data, play=false) {
 
 function playNext() {
     notes = nextNotes
+    startLoading()
     MIDI.Player.loadFile(nextContent, () => {
         nextNote = 0
         MIDI.Player.start()
+        finishLoading()
         console.log("Playing next: ", nextContent)
         fetchNextContent()
     });

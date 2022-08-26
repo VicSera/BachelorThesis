@@ -27,7 +27,7 @@ let nextNote = 0
 let noteGroup
 
 function initGraphics() {
-    const elem = document.body.getElementsByTagName('div')[1]
+    const elem = document.body.getElementsByClassName('scene')[0]
     two = new Two(params).appendTo(elem)
 
 
@@ -110,6 +110,12 @@ function renderFallingNotes(now) {
     // Add next notes
     while (nextNote < notes.length && notes[nextNote].start < now + windowSizeInSec) {
         const note = notes[nextNote]
+
+        if (note.velocity === 0) {
+            nextNote++
+            continue
+        }
+
         const key = keys[note.pitch]
 
         const rect = two.makeRoundedRectangle(key.position.x,0, key.width, getNoteHeight(note), radius)
