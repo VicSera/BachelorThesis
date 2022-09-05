@@ -66,7 +66,12 @@ def load_model(file=Config.WEIGHTS_PATH, is_eval=True, is_gpu=True):
                     hidden_dim=Config.HIDDEN_DIM,
                     dropout=Config.DROPOUT,
                     num_layers=Config.NUM_LAYERS)
-    model.load_state_dict(torch.load(file))
+    if is_gpu:
+        loaded = torch.load(file)
+    else:
+        loaded = torch.load(file, map_location=torch.device('cpu'))
+    model.load_state_dict(loaded)
+
     if is_eval:
         model.eval()
     if is_gpu:

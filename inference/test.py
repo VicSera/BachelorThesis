@@ -6,6 +6,7 @@ from midi.output import generate_midi_from_scratch, generate_midi
 from midi.util import get_sequence
 from model.LSTMidi import load_model
 
+
 if __name__ == '__main__':
     Config.load_from_file(Config.EVAL_INFO_FILE)
     model = load_model(is_gpu=False)

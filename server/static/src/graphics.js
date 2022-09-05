@@ -26,6 +26,10 @@ let nextNote = 0
 
 let noteGroup
 
+function isBlackKey(rank) {
+    return rank === 1 || rank === 4 || rank === 6 || rank === 9 || rank === 11
+}
+
 function initGraphics() {
     const elem = document.body.getElementsByClassName('scene')[0]
     two = new Two(params).appendTo(elem)
@@ -44,9 +48,10 @@ function initGraphics() {
         const rank = i % 12
 
         // black key
-        if (rank === 1 || rank === 4 || rank === 6 || rank === 9 || rank === 11) {
+        if (isBlackKey(rank)) {
             const x = lastX + keyWidth / 2
-            const rect = two.makeRoundedRectangle(x, height - keyHeight * 5/8, keyWidth * 3/4, keyHeight * 3/4, radius)
+            const rect = two.makeRoundedRectangle(x, height - keyHeight * 5/8,
+                keyWidth * 3/4, keyHeight * 3/4, radius)
 
             rect.fill = blackKeyColor
             rect.stroke = strokeColor
@@ -77,7 +82,7 @@ function highlightKeys(highlighted) {
         if (highlighted.find(i => i === idx)) {
             keys[idx].fill = blackKeyDownColor
         } else {
-            if (rank === 1 || rank === 4 || rank === 6 || rank === 9 || rank === 11) {
+            if (isBlackKey(rank)) {
                 keys[idx].fill = blackKeyColor
             } else {
                 keys[idx].fill = whiteKeyColor

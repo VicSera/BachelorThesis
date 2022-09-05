@@ -28,7 +28,7 @@ function playNext() {
 
 function initMidi() {
     MIDI.loadPlugin({
-        soundfontUrl: "lib/soundfont/",
+        soundfontUrl: "../static/lib/soundfont/",
         instrument: "acoustic_grand_piano",
         onsuccess: function() {
             console.log('MIDI booted up')
@@ -51,19 +51,3 @@ function initMidi() {
         }, 1000
     )
 }
-
-function toBinary(string) {
-  const codeUnits = new Uint16Array(string.length);
-  for (let i = 0; i < codeUnits.length; i++) {
-    codeUnits[i] = string.charCodeAt(i);
-  }
-  return btoa(String.fromCharCode(...new Uint8Array(codeUnits.buffer)));
-}
-//
-// function process_midi(data) {
-//     const content = 'data:audio/mid;base64,' + data.base64
-//     notes = data.notes
-//     MIDI.Player.loadFile(content, () => {
-//         MIDI.Player.start()
-//     });
-// }

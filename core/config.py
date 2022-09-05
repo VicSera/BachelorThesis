@@ -19,9 +19,10 @@ class Config:
 
     # Eval
     USE_EXAMPLE = True
-    SAVED_WEIGHTS_DIR = '../best_models/sesh16'
+    SAVED_WEIGHTS_ROOT = '../best_models'
+    SAVED_WEIGHTS_DIR = 'server/model'
     EVAL_INFO_FILE = f'{SAVED_WEIGHTS_DIR}/info.json'
-    WEIGHT_FILE = 'LSTMidi_Epoch7'
+    WEIGHT_FILE = 'LSTMidi_Epoch26'
     WEIGHTS_PATH = f'{SAVED_WEIGHTS_DIR}/{WEIGHT_FILE}'
     EXAMPLE_FILE = '../data/dataset/maestro-v3.0.0/2008/MIDI-Unprocessed_17_R1_2008_01-04_ORIG_MID--AUDIO_17_R1_2008_wav--4.midi'
 

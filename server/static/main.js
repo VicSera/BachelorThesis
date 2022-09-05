@@ -3,6 +3,7 @@ let playPauseButton = undefined
 let fileNameElement = undefined
 let loadingSpinnerContainer = undefined
 let sampleFileMessageElement = undefined
+let serverUrl = undefined
 
 window.onload = function() {
     initGraphics()
@@ -12,6 +13,10 @@ window.onload = function() {
     fileNameElement = document.getElementById("file-name")
     loadingSpinnerContainer = document.getElementById("spinner-container")
     sampleFileMessageElement = document.getElementById("example-file-message")
+}
+
+function processData(data) {
+    serverUrl = data.url
 }
 
 function togglePlay() {

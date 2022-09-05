@@ -1,0 +1,16 @@
+{
+    "MODEL_NAME": "LSTMidi",
+    "SESSION": "sesh17",
+    "SEQUENCE_LENGTH": 50,
+    "SEQUENCE_HOP": 1,
+    "HIDDEN_DIM": 128,
+    "NUM_LAYERS": 1,
+    "DROPOUT": 0.2,
+    "BATCH_SIZE": 64,
+    "OPTIMIZER_NAME": "Adam",
+    "LEARNING_RATE": 0.0005,
+    "CROSS_ENTROPY_WEIGHT": 1,
+    "MSE_WEIGHT": 1,
+    "WEIGHT_TOTAL": 1,
+    "DYNAMIC_LR": false
+}

@@ -3,22 +3,32 @@ import json
 import os
 import uuid
 
-from flask import Flask, request, make_response
+from flask import Flask, request, make_response, render_template
 from flask_cors import CORS
 from pretty_midi import pretty_midi
 
-from core.config import Config
 from midi.output import generate_midi_from_scratch, extract_midi_node_dict, generate_midi
 from midi.util import get_sequence
 from model.LSTMidi import load_model
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='template', static_folder='static')
 CORS(app)
 
 model = load_model(is_gpu=False)
+app.config.from_prefixed_env()
+
+schema = app.config['SCHEMA']
+host = app.config['HOST']
+port = app.config['PORT']
+url = f'{schema}://{host}:{port}'
+
+@app.route('/')
+def page():
+    print(url)
+    return render_template('index.html', data={'url': url})
 
 
-@app.route('/generate', methods=['POST'])
+@app.route('/api/generate', methods=['POST'])
 def generate():
     length = int(request.form['length'])
 

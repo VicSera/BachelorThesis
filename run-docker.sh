@@ -1,0 +1,1 @@
+docker run -p 5000:5000 -e "FLASK_SCHEMA=http" -e "FLASK_HOST=localhost" -e "FLASK_PORT=5000" -e "FLASK_APP=server/server.py" --name PerpetuuMIDI --rm perpetuumidi

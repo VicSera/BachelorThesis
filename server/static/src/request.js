@@ -8,7 +8,7 @@ function fetchNextContent(play=false, exampleFile = undefined, showLoading = fal
     }
 
     showLoading && startLoading()
-    axios.post('http://localhost:5000/generate', formData)
+    axios.post(`${serverUrl}/api/generate`, formData)
         .then(function (response) {
             setNextContent(response.data, play)
             showLoading && finishLoading()
@@ -17,3 +17,6 @@ function fetchNextContent(play=false, exampleFile = undefined, showLoading = fal
             alert('Something went wrong! - ' + error)
         })
 }
+
+
+
